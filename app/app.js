@@ -2,70 +2,73 @@
     'use strict';
 
     angular.module('NarrowItDownApp', [])
-        .controller('NarrowItDownController',NarrowItDownController)
-        .service('MenuSearchService',MenuSearchService)
-        .constant('ApiBasePath', 'https://davids-restaurant.herokuapp.com')
-        .directive('foundItems',foundItems);
+        .controller('NarrowItDownController', NarrowItDownController)
+        .service('MenuSearchService', MenuSearchService)
+        .constant('ApiBasePath', "https://davids-restaurant.herokuapp.com")
+        .directive('foundItems', FoundItems);
 
-    function foundItems() {
-        let ddo = {
+    function FoundItems() {
+        var ddo = {
             restrict: 'E',
             templateUrl: 'foundItems.html',
             scope: {
                 foundItems: '<',
+                onEmpty: '<',
                 onRemove: '&'
             },
             controller: NarrowItDownController,
-            controllerAs: '$ctrl',
+            controllerAs: 'menu',
             bindToController: true
         };
+
         return ddo;
     }
-    
+
     NarrowItDownController.$inject = ['MenuSearchService'];
+
     function NarrowItDownController(MenuSearchService) {
-        let $ctrl = this;
-        $ctrl.isShowTable = false;
-        $ctrl.isShowWarning = false;
-        $ctrl.searchTerm = '';
-        $ctrl.found = [];
-        $ctrl.getMatchedMenuItems = function(searchTerm) {
-            $ctrl.isShowTable = false;
-            $ctrl.isShowWarning = false;
-            $ctrl.found = [];
-            if (searchTerm) {
-                let promise = MenuSearchService.getMatchedMenuItems(searchTerm);
-                promise.then((items) => {
-                    if (items.length > 0){
-                        $ctrl.found = items;
-                        $ctrl.isShowTable = true;
-                    }
-                    else {
-                        $ctrl.isShowWarning = true;
-                    }
-                });
-            }
-            else {
-                $ctrl.isShowWarning = true;
-            }
-        }
-        $ctrl.removeItem = function(index) {
-            $ctrl.found.splice(index,1);
+        var menu = this;
+        menu.shortName = '';
+
+        menu.matchedMenuItems = function(searchTerm) {
+            var promise = MenuSearchService.getMatchedMenuItems(searchTerm);
+
+            promise.then(function(items) {
+                if (items && items.length > 0) {
+                    menu.message = '';
+                    menu.found = items;
+                } else {
+                    menu.message = 'Nothing found!';
+                    menu.found = [];
+                }
+            });
+        };
+
+        menu.removeMenuItem = function(itemIndex) {
+            menu.found.splice(itemIndex, 1);
         }
     }
 
-    MenuSearchService.$inject = ['$http','ApiBasePath'];
-    function MenuSearchService($http,ApiBasePath) {
-        let service = this;
+    MenuSearchService.$inject = ['$http', 'ApiBasePath'];
+
+    function MenuSearchService($http, ApiBasePath) {
+        var service = this;
 
         service.getMatchedMenuItems = function(searchTerm) {
             return $http({
-                method: 'GET',
-                url: (ApiBasePath + '/menu_items.json')
-            }).then((response) => {
-                return response.data['menu_items'].filter(item =>
-                    item.description.toLowerCase().includes(searchTerm));
+                method: "GET",
+                url: (ApiBasePath + "/menu_items.json")
+            }).then(function(response) {
+                var foundItems = [];
+
+                for (var i = 0; i < response.data['menu_items'].length; i++) {
+                    if (searchTerm.length > 0 && response.data['menu_items'][i]['description'].toLowerCase().indexOf(searchTerm) !== -1) {
+                        foundItems.push(response.data['menu_items'][i]);
+                    }
+                }
+
+                return foundItems;
             });
-        }
+        };
     }
-}())
+})();
